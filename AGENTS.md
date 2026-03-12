@@ -1,0 +1,66 @@
+# AGENTS.md
+
+## Project
+- This repository is the central triage hub for Voicenotes captures before they are dispatched to other local projects.
+- Primary responsibilities: ingest notes, preserve canonical raw JSON copies, classify conservatively, queue ambiguous or not-yet-placeable notes for review, and dispatch approved notes to downstream project inboxes.
+
+## Language
+- Write project-facing repository files in English.
+- Preserve the downstream project's language conventions when generating notes for that project.
+
+## Safety Rules
+- Never delete or overwrite the canonical source note from Voicenotes.
+- Never auto-dispatch a note, even when the routing confidence is high.
+- Always ask the user for explicit confirmation before writing any note into a downstream project inbox.
+- Treat confirmation as note-specific by `source_note_id`. A batch dispatch must name the exact approved `source_note_id` values.
+- Send uncertain notes to `data/review/ambiguous/`, `data/review/needs_review/`, or `data/review/pending_project/` when no current project/rule exists yet.
+- Treat downstream project writes as derived exports. The canonical note always remains in this repository.
+- Never dispatch a normalized note directly. Compile a project-ready package first and dispatch from that compiled artifact.
+- Compiled packages must be fresh before dispatch.
+
+## Project Boundaries
+- Treat this repository as the shared starter upstream. Private downstream repos may preserve their own branded `projects/registry.shared.json`, private docs, and private wording under the ownership rules.
+- Keep shareable routing defaults in `projects/registry.shared.json`.
+- Keep the local overlay template in `projects/registry.example.json`.
+- Keep shared neutral agent workflow references in `.agents/skills/`.
+- Keep Codex-specific adaptations in `.codex/skills/`.
+- Keep Claude-specific adaptations in `.claude/skills/`.
+- Keep machine-specific routing paths in `projects/registry.local.json`, which must stay out of Git.
+- Keep stateful note artifacts under `data/`.
+- Keep machine-local checkpoints under `state/`, out of Git.
+- Keep automation and processing code under `src/` or `scripts/`.
+- Keep template/private sync guardrails in `repo-governance/ownership.manifest.json`.
+- Do not edit downstream repositories unless the task explicitly requires it.
+- If a downstream repository must be edited, read its local `AGENTS.md` first and follow its conventions.
+
+## Workflow Defaults
+- Treat `.agents/skills/` as the canonical neutral reference layer for shared workflow rules.
+- Keep `.codex/skills/` aligned with `.agents/skills/`, adding only Codex-specific notes when needed.
+- Prefer the local skill `voicenotes-direct-sync` for direct Voicenotes access.
+- Prefer the local skill `mg-start-session-opener-voicenotes` at the beginning of a session.
+- Prefer the local skill `voicenotes-triage-review` for routing analysis and user-facing review.
+- Prefer `python3 scripts/bootstrap_local.py` when setting up a new machine or validating starter hygiene.
+- Prefer the repository entrypoint `python3 scripts/voicenotes_client.py ...` for direct VoiceNotes API access in project-facing docs and workflows.
+- Prefer `python3 scripts/voice_notes.py discover` when the `pending_project` queue starts to accumulate notes.
+- Prefer `python3 scripts/voice_notes.py compile` before any real dispatch so downstream projects receive a richer brief than the raw transcript.
+- Use stable note IDs and collision-resistant filenames.
+- Make the pipeline idempotent: repeated runs must not duplicate normalized notes or dispatch records.
+- Keep the note model layered: `capture_kind`, `intent`, and `destination` must remain distinct fields.
+- Keep compiled notes rich: include summary, facts, tasks, decisions, open questions, follow-ups, timeline, ambiguities, and evidence spans whenever available.
+- Fail closed when machine-local config is missing or still uses placeholder paths.
+- Validate with focused commands first, then broader checks if the repository grows more tooling later.
+- Preserve note relationship metadata (`thread_id`, `continuation_of`, `related_note_ids`) when reviewing or dispatching related captures.
+- Treat `data/review/...` as queue views. Canonical metadata changes should land in `data/normalized/`, not only in review copies.
+
+## Current Commands
+- `python3 scripts/bootstrap_local.py`
+- `python3 scripts/voicenotes_client.py sync --output-dir ./data/raw`
+- `python3 scripts/voice_notes.py status`
+- `python3 scripts/voice_notes.py normalize`
+- `python3 scripts/voice_notes.py triage`
+- `python3 scripts/voice_notes.py compile`
+- `python3 scripts/voice_notes.py review`
+- `python3 scripts/voice_notes.py discover`
+- `python3 scripts/voice_notes.py dispatch --dry-run`
+- `python3 scripts/check_agent_surface_parity.py`
+- `python3 scripts/check_repo_ownership.py`

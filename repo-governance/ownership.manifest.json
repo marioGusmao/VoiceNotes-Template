@@ -1,0 +1,155 @@
+{
+  "classes": {
+    "template_owned": "Safe for automatic template updates into derived repositories.",
+    "private_owned": "Reserved for private-repo customization and never updated from the template.",
+    "shared_review": "Shared between template and private, but updates should arrive via reviewable PRs.",
+    "local_only": "Machine-local or runtime state. Never commit or sync."
+  },
+  "rules": [
+    {
+      "pattern": "src/**",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "scripts/**",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "tests/**",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "docs/**",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": ".release-please-config.json",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": ".release-please-manifest.json",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": ".github/workflows/template-release.yml",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": ".github/workflows/template-upstream-sync.yml",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "parity.manifest.json",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "repo-governance/**",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "projects/registry.example.json",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": ".env.example",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "VERSION",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "CHANGELOG.md",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": "template.meta.json",
+      "ownership": "template_owned",
+      "sync_policy": "template_sync"
+    },
+    {
+      "pattern": ".gitignore",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": "README.md",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": "AGENTS.md",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": "CLAUDE.md",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": ".agents/**",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": ".codex/skills/**",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": ".claude/skills/**",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": "projects/registry.shared.json",
+      "ownership": "private_owned",
+      "sync_policy": "blocked"
+    },
+    {
+      "pattern": "private.meta.json",
+      "ownership": "private_owned",
+      "sync_policy": "blocked"
+    },
+    {
+      "pattern": "template-base.json",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": "projects/registry.local.json",
+      "ownership": "local_only",
+      "sync_policy": "blocked"
+    },
+    {
+      "pattern": ".env.local",
+      "ownership": "local_only",
+      "sync_policy": "blocked"
+    },
+    {
+      "pattern": "data/**",
+      "ownership": "local_only",
+      "sync_policy": "blocked"
+    },
+    {
+      "pattern": "state/**",
+      "ownership": "local_only",
+      "sync_policy": "blocked"
+    }
+  ]
+}

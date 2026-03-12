@@ -1,0 +1,10 @@
+{
+  "projects": {
+    "home_renovation": {
+      "inbox_path": "/ABSOLUTE/PATH/TO/HOME_RENOVATION/Inbox/VoiceNotes"
+    },
+    "weekly_meal_prep": {
+      "inbox_path": "/ABSOLUTE/PATH/TO/WEEKLY_MEAL_PREP/Inbox/VoiceNotes"
+    }
+  }
+}

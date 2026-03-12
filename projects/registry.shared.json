@@ -1,0 +1,44 @@
+{
+  "defaults": {
+    "auto_dispatch_threshold": 0.9,
+    "min_keyword_hits": 2
+  },
+  "projects": {
+    "home_renovation": {
+      "display_name": "Home Renovation",
+      "language": "en",
+      "note_type": "project-idea",
+      "auto_dispatch_threshold": 0.9,
+      "keywords": [
+        "renovation",
+        "contractor",
+        "kitchen",
+        "bathroom",
+        "budget",
+        "quote",
+        "tile",
+        "paint",
+        "plumbing",
+        "electrical"
+      ]
+    },
+    "weekly_meal_prep": {
+      "display_name": "Weekly Meal Prep",
+      "language": "en",
+      "note_type": "daily-ops",
+      "auto_dispatch_threshold": 0.9,
+      "keywords": [
+        "meal prep",
+        "groceries",
+        "recipe",
+        "shopping list",
+        "fridge",
+        "freezer",
+        "lunch",
+        "dinner",
+        "batch cook",
+        "ingredients"
+      ]
+    }
+  }
+}

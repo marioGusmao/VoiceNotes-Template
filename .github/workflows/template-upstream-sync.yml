@@ -1,0 +1,250 @@
+name: template-upstream-sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_REPO_OVERRIDE: ${{ vars.TEMPLATE_UPSTREAM_REPO }}
+      UPSTREAM_TOKEN: ${{ secrets.TEMPLATE_UPSTREAM_TOKEN != '' && secrets.TEMPLATE_UPSTREAM_TOKEN || github.token }}
+      SYNC_BRANCH: chore/template-sync
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve upstream release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.request
+          from pathlib import Path
+
+          root = Path(".")
+          upstream_repo = (os.environ.get("UPSTREAM_REPO_OVERRIDE") or "").strip()
+          template_base_path = root / "template-base.json"
+          if not upstream_repo and template_base_path.exists():
+              upstream_repo = json.loads(template_base_path.read_text(encoding="utf-8")).get("template_repo", "")
+          if not upstream_repo:
+              print("upstream_repo=", file=open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8"))
+              print("update_required=false", file=open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8"))
+              sys.exit(0)
+
+          token = os.environ["UPSTREAM_TOKEN"]
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{upstream_repo}/releases",
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"Bearer {token}",
+                  "User-Agent": "voicenotes-template-upstream-sync",
+              },
+          )
+          with urllib.request.urlopen(request) as response:
+              releases = json.load(response)
+
+          stable_release = next((item for item in releases if not item.get("draft") and not item.get("prerelease")), None)
+          if stable_release is None:
+              print(f"upstream_repo={upstream_repo}", file=open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8"))
+              print("update_required=false", file=open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8"))
+              sys.exit(0)
+
+          current_tag = ""
+          current_version = ""
+          if template_base_path.exists():
+              current = json.loads(template_base_path.read_text(encoding="utf-8"))
+              current_tag = current.get("template_base_tag", "")
+              current_version = current.get("template_base_version", "")
+          else:
+              template_meta = root / "template.meta.json"
+              if template_meta.exists():
+                  current_version = json.loads(template_meta.read_text(encoding="utf-8")).get("version", "")
+
+          latest_tag = stable_release["tag_name"]
+          latest_version = latest_tag.removeprefix("v")
+          update_required = latest_tag != current_tag and latest_version != current_version
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              print(f"upstream_repo={upstream_repo}", file=handle)
+              print(f"latest_tag={latest_tag}", file=handle)
+              print(f"latest_version={latest_version}", file=handle)
+              print(f"release_url={stable_release['html_url']}", file=handle)
+              print(f"update_required={'true' if update_required else 'false'}", file=handle)
+          PY
+
+      - name: Stop when no update is available
+        if: steps.release.outputs.update_required != 'true'
+        run: echo "No upstream template update available."
+
+      - name: Clone upstream release
+        if: steps.release.outputs.update_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "${{ steps.release.outputs.latest_tag }}" \
+            "https://x-access-token:${UPSTREAM_TOKEN}@github.com/${{ steps.release.outputs.upstream_repo }}.git" \
+            "$RUNNER_TEMP/upstream-template"
+
+      - name: Sync allowed template paths
+        if: steps.release.outputs.update_required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          upstream="$RUNNER_TEMP/upstream-template"
+          paths=(
+            src
+            scripts
+            tests
+            .codex/skills
+            .claude/skills
+            .github/workflows/template-release.yml
+            .github/workflows/template-upstream-sync.yml
+            README.md
+            AGENTS.md
+            CLAUDE.md
+            parity.manifest.json
+            repo-governance
+            projects/registry.example.json
+            VERSION
+            CHANGELOG.md
+            template.meta.json
+            .release-please-config.json
+            .release-please-manifest.json
+          )
+          for path in "${paths[@]}"; do
+            if [ -e "$upstream/$path" ]; then
+              mkdir -p "$(dirname "$path")"
+              rsync -a --delete "$upstream/$path" "$path"
+            fi
+          done
+
+      - name: Capture changed files
+        if: steps.release.outputs.update_required == 'true'
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          python3 - <<'PY'
+          import os
+          import subprocess
+
+          raw = subprocess.check_output(
+              ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+              text=True,
+          )
+          changed = []
+          for line in raw.splitlines():
+              if not line:
+                  continue
+              path = line[3:]
+              if " -> " in path:
+                  path = path.split(" -> ", 1)[1]
+              path = path.strip()
+              if path:
+                  changed.append(path)
+          changed = sorted(set(changed))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              print(f"has_changes={'true' if changed else 'false'}", file=handle)
+              print("changed_files<<EOF", file=handle)
+              print("\n".join(changed), file=handle)
+              print("EOF", file=handle)
+          PY
+
+      - name: Stop when sync produced no file changes
+        if: steps.release.outputs.update_required == 'true' && steps.changes.outputs.has_changes != 'true'
+        run: echo "Upstream release is already fully represented in this repository."
+
+      - name: Check ownership policy
+        if: steps.release.outputs.update_required == 'true' && steps.changes.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            args+=(--path "$path")
+          done <<'EOF'
+          ${{ steps.changes.outputs.changed_files }}
+          EOF
+          python3 scripts/check_repo_ownership.py --mode template-sync "${args[@]}"
+
+      - name: Update template base metadata
+        if: steps.release.outputs.update_required == 'true' && steps.changes.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import subprocess
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          path = Path("template-base.json")
+          upstream_commit = subprocess.check_output(
+              ["git", "-C", os.environ["RUNNER_TEMP"] + "/upstream-template", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          if path.exists():
+              payload = json.loads(path.read_text(encoding="utf-8"))
+          else:
+              payload = {}
+          payload.update(
+              {
+                  "template_repo": os.environ["UPSTREAM_REPO"],
+                  "template_base_version": os.environ["LATEST_VERSION"],
+                  "template_base_tag": os.environ["LATEST_TAG"],
+                  "template_base_commit": upstream_commit,
+                  "last_template_sync_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              }
+          )
+          path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+          PY
+        env:
+          UPSTREAM_REPO: ${{ steps.release.outputs.upstream_repo }}
+          LATEST_TAG: ${{ steps.release.outputs.latest_tag }}
+          LATEST_VERSION: ${{ steps.release.outputs.latest_version }}
+
+      - name: Commit sync branch
+        if: steps.release.outputs.update_required == 'true' && steps.changes.outputs.has_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$SYNC_BRANCH"
+          git add -A
+          git commit -m "chore(template-sync): update template to ${{ steps.release.outputs.latest_tag }}"
+          git push --force --set-upstream origin "$SYNC_BRANCH"
+
+      - name: Create or update draft PR
+        if: steps.release.outputs.update_required == 'true' && steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh pr list --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number')"
+          body="Template upstream update from [${{ steps.release.outputs.latest_tag }}](${{ steps.release.outputs.release_url }})."
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "chore(template-sync): update template to ${{ steps.release.outputs.latest_tag }}" --body "$body"
+          else
+            gh pr create --draft --head "$SYNC_BRANCH" --title "chore(template-sync): update template to ${{ steps.release.outputs.latest_tag }}" --body "$body"
+          fi

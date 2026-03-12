@@ -1,0 +1,16 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "voicenotes-template",
+      "extra-files": [
+        "VERSION",
+        {
+          "type": "json",
+          "path": "template.meta.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}

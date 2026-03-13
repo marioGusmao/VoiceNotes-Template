@@ -1,8 +1,41 @@
 # VoiceNotes Triage Hub
 
+English | [Português (Portugal)](README.pt-PT.md)
+
 This repository is the shared starter upstream for a VoiceNotes triage workflow that works in both Codex and Claude Code.
 
 The starter keeps the common pipeline, safety rules, governance tooling, and neutral routing examples in Git. Each user keeps local secrets, local inbox paths, and live note artifacts outside Git. A private daily repo can then add branded projects, personal skills, and personal operational rules on top of this base.
+
+## New To GitHub Templates
+
+A GitHub template repository is a starter project you can copy into your own repository.
+
+For this project, the template is useful because it gives you:
+
+- the VoiceNotes workflow and scripts
+- the safety rules and validation checks
+- neutral example routing
+- a clean public starting point without your private notes, tokens, or local paths
+
+Use a template when you want your own copy of the project to customize safely.
+
+In this case, the recommended setup is:
+
+1. Open this repository on GitHub.
+2. Click `Use this template`.
+3. Choose `Create a new repository`.
+4. Create your own repository from it.
+5. Set your new repository to `Private` unless you explicitly want to share your derived version.
+6. Clone your new repository to your machine.
+7. Run `python3 scripts/bootstrap_local.py` in your copy.
+
+Important differences from a fork:
+
+- a template gives you your own clean starting repository
+- your repository can stay private even if this template is public
+- your local `.env.local`, `data/`, and `state/` stay only on your machine
+
+If you only want to use the workflow, create a repository from the template. You do not need to contribute back to this upstream repository.
 
 ## Repository Model
 
@@ -218,3 +251,9 @@ Before publishing the template:
 5. Confirm `.agents/skills/`, `.codex/skills/`, and `.claude/skills/` still describe the same workflow contract
 6. Enable GitHub Template Repository on the upstream repo
 7. Enable branch protection and required checks for tests, parity, ownership, and release automation
+
+## Contributing
+
+External contributors can use the public issue templates and pull request template included in this repository.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the expected workflow, validation commands, and the list of local-only artifacts that must never be committed.

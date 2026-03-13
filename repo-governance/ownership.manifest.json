@@ -97,12 +97,32 @@
       "sync_policy": "review_required"
     },
     {
+      "pattern": "README.pt-PT.md",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": "CONTRIBUTING.md",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
       "pattern": "AGENTS.md",
       "ownership": "shared_review",
       "sync_policy": "review_required"
     },
     {
       "pattern": "CLAUDE.md",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": ".github/ISSUE_TEMPLATE/**",
+      "ownership": "shared_review",
+      "sync_policy": "review_required"
+    },
+    {
+      "pattern": ".github/pull_request_template.md",
       "ownership": "shared_review",
       "sync_policy": "review_required"
     },
